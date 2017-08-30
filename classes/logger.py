@@ -16,12 +16,15 @@ class Logger:
     def set_tid(self, tid):
         self.tid = tid
 
-    def log(self, text, color=None):
+    def log(self, text, color=None, timestamp=True):
         if color is not None:
             text = colored(text, color)
         if self.tid is not None:
             text = '[{}] :: {}'.format(self.tid, text)
-        print('[{}] {}'.format(strftime('%H:%M:%S'), text))
+        if timestamp:
+            print('[{}] {}'.format(strftime('%H:%M:%S'), text))
+        else:
+            print(text)
 
     def slack(self, text):
         # TODO: beautify this output
