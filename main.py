@@ -12,6 +12,8 @@ from os import listdir
 
 def main():
     log = Logger().log
+    log('*************************\n\nSHOPIFY ATC V0.2.0 OPEN SOURCE\nBY ALEX GOMPPER @edzart\n\n**********************'
+        '***', color='blue', timestamp=False)
     log('starting tasks', color='green')
     threads = []
     i = 0
