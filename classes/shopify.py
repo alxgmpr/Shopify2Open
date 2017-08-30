@@ -51,10 +51,13 @@ class Shopify(threading.Thread):
     # poll function waits a configured amount of time before continuing
     def poll(self):
         log('Waiting {} sec(s) before continuing'.format(self.t['exec_config']['sleep_time']), color='blue')
+        sleep(self.t['exec_config']['sleep_time'])
 
     # config check validates config settings
     def check_config(self):
-        # TODO: complete check_config
+        if self.c['log_config']['slack_enable'] and self.c['log_config']['slack_hook'] in {None, ''}:
+            log('[error][config.json] Slack logging enabled but no webhook provided')
+            return False
         return True
 
     # gets all products on the site. returns a list of product objects
@@ -84,6 +87,7 @@ class Shopify(threading.Thread):
     def compare_products(self, product_list):
         if not all(isinstance(p, Product) for p in product_list):
             raise Exception('Expected list of product objects')
+        log('Comparing products against keywords', color='blue')
         return product_list[0]
 
     # gets all product variants from a product. returns a list of variant objects
@@ -91,23 +95,26 @@ class Shopify(threading.Thread):
     def get_product_variants(self, product):
         if not(isinstance(product, Product)):
             raise Exception('Expected product object')
+        log('[{}.json] Getting product variants', color='blue')
 
     # compares a list of variant objects against configured size
     # if a match is found, return that single variant object
     def compare_variants(self, variant_list):
         if not all(isinstance(v, Variant) for v in variant_list):
             raise Exception('Expected list of variant objects')
+        log('Comparing variants against sizes', color='blue')
 
-    # scrapes a given page source for captcha presence. if there is one, return True
+    # scrapes a given page source for captcha presence. if there is one, cry
     def captcha(self, page_source):
         if 'g-recaptcha' in page_source:
-            return True
-        return False
+            log('[error] Encountered captcha. Handling not provided.', color='red')
+            exit(-1)
+        return
 
     # # adds a product to cart. returns a checkout url
-    def add_to_cart(self, product):
-        if not isinstance(product, Product):
-            raise Exception('Expected product object')
+    def add_to_cart(self, variant):
+        if not isinstance(variant, Variant):
+            raise Exception('Expected variant object')
     #
     # # opens checkout and calls subsequent fx to check for sold out, captcha
     # def go_to_checkout(self, checkout_url):
@@ -124,6 +131,8 @@ class Shopify(threading.Thread):
         if not self.check_config():
             raise Exception('Configuration check failed')
         products = self.get_products()
-        for p in products:
-            print p.url
+        selected_product = self.compare_products(products)
+        variants = self.get_product_variants(selected_product)
+        selected_variant = self.compare_variants(variants)
+        checkout_url = self.add_to_cart(selected_variant)
 
