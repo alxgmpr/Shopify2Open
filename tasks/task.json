@@ -1,0 +1,30 @@
+{
+  "exec_config": {
+    "refresh_time": 2,
+    "drop_timer": "10:00:00",
+    "use_proxies": false
+  },
+  "site_config": {
+    "base_url": "https://kith.com",
+    "early_link": "",
+    "dummy_link": "",
+    "positive_kw": "yeezy,boost",
+    "negative_kw": "infant",
+    "size": "10"
+  },
+  "checkout": {
+    "fname": "Fake",
+    "lname": "Fake",
+    "email": "fake@me.com",
+    "phone": "(573) 123-1234",
+    "addr1": "456 Fake St",
+    "addr2": "",
+    "city": "New York City",
+    "state": "New York",
+    "zip": "12345",
+    "cc": "1234123412341234",
+    "exp_m": "05",
+    "exp_y": "2022",
+    "cvv": "123"
+  }
+}

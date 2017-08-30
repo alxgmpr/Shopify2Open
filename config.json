@@ -1,0 +1,6 @@
+{
+  "log_config": {
+    "slack_enable": false,
+    "slackhook": ""
+  }
+}
