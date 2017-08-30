@@ -1,15 +1,15 @@
 # coding = utf-8
 
-# Shopify ATC v0.2.0
+# Shopify ATC v0.2.0 Open Source
 # By Alex Gompper @edzart
 # http://github.com/alxgmpr
 
 from logger import Logger
-from collection import Collection
 from product import Product
 from variant import Variant
 
 import threading
+import re
 from time import time, sleep
 from json import load
 import urllib3
@@ -60,12 +60,31 @@ class Shopify(threading.Thread):
     # gets all products on the site. returns a list of product objects
     # tries 'sitemap_products_1.xml'
     def get_products(self):
+        log('[sitemap_products_1.xml] Getting products', color='blue')
+        endpoint = '{}/sitemap_products_1.xml'.format(self.t['site_config']['base_url'])
+        r = requests.get(
+            endpoint,
+            headers=self.headers,
+            verify=False
+        )
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError:
+            log('[error][{}][sitemap_products_1.xml] Failed to get all products'.format(r.status_code), color='red')
+            return None
+        expression = '<loc>(.*)</loc>\s.*</lastmod>\s.*\s.*\s.*\s.*\s.*\s.*<image:title>(.*)</image:title>'
+        products = re.findall(expression, r.text)
+        product_objects = []
+        for prod in products:
+            product_objects.append(Product(prod[1], prod[0]))
+        return product_objects
 
     # compares a list of product objects against configured keywords.
     # if a match is found, return that single product object
     def compare_products(self, product_list):
         if not all(isinstance(p, Product) for p in product_list):
             raise Exception('Expected list of product objects')
+        return product_list[0]
 
     # gets all product variants from a product. returns a list of variant objects
     # tries 'productname.json'
@@ -79,12 +98,16 @@ class Shopify(threading.Thread):
         if not all(isinstance(v, Variant) for v in variant_list):
             raise Exception('Expected list of variant objects')
 
-    # scrapes a given page source for captcha presence. if there is one, get a solution
-    # returns a captcha object if present or false if not present
-    # def captcha(self, page_source):
-    #
+    # scrapes a given page source for captcha presence. if there is one, return True
+    def captcha(self, page_source):
+        if 'g-recaptcha' in page_source:
+            return True
+        return False
+
     # # adds a product to cart. returns a checkout url
-    # def add_to_cart(self):
+    def add_to_cart(self, product):
+        if not isinstance(product, Product):
+            raise Exception('Expected product object')
     #
     # # opens checkout and calls subsequent fx to check for sold out, captcha
     # def go_to_checkout(self, checkout_url):
@@ -100,3 +123,7 @@ class Shopify(threading.Thread):
     def run(self):
         if not self.check_config():
             raise Exception('Configuration check failed')
+        products = self.get_products()
+        for p in products:
+            print p.url
+
