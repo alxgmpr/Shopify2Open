@@ -23,7 +23,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class Shopify(threading.Thread):
-    def __init__(self, thread_id, task_file):
+    def __init__(self, thread_id, task_file, proxy_manager):
         threading.Thread.__init__(self)
         self.start_time = time()
         logger.set_tid(thread_id)
@@ -32,6 +32,14 @@ class Shopify(threading.Thread):
             self.c = load(cfg)
         with open(task_file) as tsk:
             self.t = load(tsk)
+        if self.t['exec_config']['use_proxies']:
+            proxy = proxy_manager.get_next_proxy()
+            log('[{}] adding proxy to task'.format(proxy), color='blue')
+            p = {
+                'http': 'http://{}'.format(proxy),
+                'https': 'https://{}'.format(proxy)
+            }
+            self.S.proxies = p
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/58.0.3029.81 Safari/537.36',
@@ -87,7 +95,7 @@ class Shopify(threading.Thread):
     def compare_products(self, product_list):
         if not all(isinstance(p, Product) for p in product_list):
             raise Exception('Expected list of product objects')
-        log('Comparing products against keywords', color='blue')
+        log('Comparing {} products against keywords'.format(len(product_list)), color='blue')
         return product_list[0]
 
     # gets all product variants from a product. returns a list of variant objects
@@ -95,7 +103,19 @@ class Shopify(threading.Thread):
     def get_product_variants(self, product):
         if not(isinstance(product, Product)):
             raise Exception('Expected product object')
-        log('[{}.json] Getting product variants', color='blue')
+        log('[{}.json] Getting product variants'.format(product.url), color='blue')
+        endpoint = '{}.json'.format(product.url)
+        r = self.S.get(
+            endpoint,
+            headers=self.headers,
+            verify=False
+        )
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError:
+            log('[error][{}][{}.json] Failed to get variants'.format(r.status_code, product.url), color='red')
+            return None
+        
 
     # compares a list of variant objects against configured size
     # if a match is found, return that single variant object
@@ -133,6 +153,6 @@ class Shopify(threading.Thread):
         products = self.get_products()
         selected_product = self.compare_products(products)
         variants = self.get_product_variants(selected_product)
-        selected_variant = self.compare_variants(variants)
-        checkout_url = self.add_to_cart(selected_variant)
+        #selected_variant = self.compare_variants(variants)
+        #checkout_url = self.add_to_cart(selected_variant)
 
