@@ -115,6 +115,11 @@ class Shopify(threading.Thread):
         except requests.exceptions.HTTPError:
             log('[error][{}][{}.json] Failed to get variants'.format(r.status_code, product.url), color='red')
             return None
+        with r.json() as json:
+            variant_objects = []
+            for var in json['variants']:
+                variant_objects.append(Variant(var['id'], var['title']))
+        return variant_objects
         
 
     # compares a list of variant objects against configured size
@@ -135,6 +140,21 @@ class Shopify(threading.Thread):
     def add_to_cart(self, variant):
         if not isinstance(variant, Variant):
             raise Exception('Expected variant object')
+        endpoint = '{}/cart/add.js'.format(self.t['site_config']['base_url'])
+        data = {
+            'id': variant.vid,
+            'qty': '1'
+        }
+        r = self.S.post(
+            endpoint,
+            headers=headers,
+            verify=False,
+            data=data,
+        )
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError:
+
     #
     # # opens checkout and calls subsequent fx to check for sold out, captcha
     # def go_to_checkout(self, checkout_url):
